@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Keeper</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.0/gsap.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --secondary-color: #818cf8;
+            --accent-color: #4f46e5;
+            --background: #f8fafc;
+            --card-bg: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --success: #22c55e;
+            --error: #ef4444;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            background: var(--background);
+            color: var(--text-primary);
+            min-height: 100vh;
+            opacity: 0;
+            animation: fadeIn 1s ease forwards;
+        }
+
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--primary-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: splashFadeOut 0.5s ease forwards;
+            animation-delay: 2s;
+        }
+
+        .splash-content {
+            text-align: center;
+            color: white;
+            transform: scale(0);
+            animation: splashScale 0.5s ease forwards;
+        }
+
+        .splash-content i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: rotate360 1.5s ease infinite;
+        }
+
+        header {
+            background: var(--card-bg);
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+            animation: headerLine 3s ease-in-out infinite;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .memory-form {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(11, 3, 3, 0.1);
+            margin-bottom: 2rem;
+            transform: translateY(20px);
+            opacity: 0;
+            animation: slideUp 0.5s ease forwards;
+            animation-delay: 2.5s;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        .form-group input[type="text"],
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .form-group input[type="text"]:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .file-upload {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .file-upload:hover {
+            background: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .preview-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .preview-item {
+            position: relative;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            aspect-ratio: 1;
+            box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+            transform: scale(0);
+            animation: scaleIn 0.3s ease forwards;
+        }
+
+        .preview-item img,
+        .preview-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .submit-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+        }
+
+        .submit-btn:hover {
+            background: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .memories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            padding: 1rem 0;
+        }
+
+        .memory-card {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            transition: var(--transition);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: cardAppear 0.5s ease forwards;
+        }
+
+        .memory-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+
+        .memory-media {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            transition: var(--transition);
+        }
+
+        .memory-card:hover .memory-media {
+            transform: scale(1.05);
+        }
+
+        .memory-content {
+            padding: 1.5rem;
+        }
+
+        .memory-title {
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 1.25rem;
+        }
+
+        .memory-description {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        .memory-date {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .memory-actions {
+            padding: 1rem;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .delete-btn {
+            background: var(--error);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+        }
+
+        .delete-btn:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            background: var(--success);
+            color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            transform: translateX(100%);
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .toast.error {
+            background: var(--error);
+        }
+        /* Add new styles for the modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal.active {
+    display: flex;
+    opacity: 1;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    border-radius: 1rem;
+    overflow: hidden;
+    position: relative;
+    transform: scale(0.8);
+    transition: transform 0.3s ease;
+}
+
+.modal.active .modal-content {
+    transform: scale(1);
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: var(--transition);
+}
+
+.modal-close:hover {
+    color: var(--error);
+    transform: scale(1.1);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    max-height: calc(90vh - 4rem);
+}
+
+.modal-media {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.modal-media img,
+.modal-media video {
+    width: 100%;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+}
+
+.memory-details {
+    background: #f8fafc;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+}
+
+.memory-details-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.memory-details-item:last-child {
+    border-bottom: none;
+}
+
+.memory-details-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.memory-details-value {
+    color: var(--text-primary);
+}
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        @keyframes splashFadeOut {
+            to {
+                transform: translateY(-100%);
+            }
+        }
+
+        @keyframes splashScale {
+            to {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes rotate360 {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes headerLine {
+            0% { left: -100%; }
+            50% { left: 100%; }
+            100% { left: -100%; }
+        }
+
+        @keyframes slideUp {
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes scaleIn {
+            to {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes cardAppear {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            .memory-form {
+                padding: 1rem;
+            }
+
+            .memories-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="splash-screen">
+        <div class="splash-content">
+            <i class="fas fa-book-open"></i>
+            <h1>Welcome to Memory Keeper</h1>
+        </div>
+    </div>
+
+    <header>
+        <h1><i class="fas fa-book-open"></i> Memory Keeper</h1>
+        <p>Capture and preserve your precious moments</p>
+        <p>Because every moment deserves to be remembered</p>
+    </header>
+
+    <div class="container">
+        <div class="memory-form">
+            <form id="memoryForm">
+                <div class="form-group">
+                    <label for="memoryTitle">Title</label>
+                    <input type="text" id="memoryTitle" required placeholder="Enter a title for your memory">
+                </div>
+
+                <div class="form-group">
+                    <label for="memoryDescription">Description</label>
+                    <textarea id="memoryDescription" rows="4" placeholder="Write about this memory..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="file-upload">
+                        <i class="fas fa-cloud-upload-alt"></i> Upload Media
+                        <input type="file" id="memoryMedia" accept="image/*,video/*" multiple>
+                    </label>
+                </div>
+
+                <div class="preview-container" id="previewContainer"></div>
+
+                <button type="submit" class="submit-btn">
+                    <i class="fas fa-save"></i> Save Memory
+                </button>
+            </form>
+        </div>
+
+        <div class="memories-grid" id="memoriesGrid"></div>
+    </div>
+     <!-- Add modal structure -->
+     <div class="modal" id="memoryModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="memory-title"></h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-media"></div>
+                <p class="memory-description"></p>
+                <div class="memory-details"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        class MemoryKeeper {
+            constructor() {
+        this.MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB in bytes
+        this.memories = [];
+        this.form = document.getElementById('memoryForm');
+        this.mediaInput = document.getElementById('memoryMedia');
+        this.previewContainer = document.getElementById('previewContainer');
+        this.memoriesGrid = document.getElementById('memoriesGrid');
+        this.toast = document.getElementById('toast');
+        this.modal = document.getElementById('memoryModal');
+        
+        // Initialize IndexedDB
+        this.initDB().then(() => {
+            this.initializeEventListeners();
+            this.loadMemories();
+            this.initializeModalEvents();
+        });;
+
+        gsap.from('.form-group', {
+            opacity: 0,
+            y: 20,
+            duration: 0.5,
+            stagger: 0.1,
+            ease: 'power2.out',
+            delay: 2.7
+        });
+    }
+
+    async initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('MemoryKeeperDB', 1);
+
+            request.onerror = () => {
+                this.showToast('Error initializing database', true);
+                reject();
+            };
+
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('memories')) {
+                    db.createObjectStore('memories', { keyPath: 'id' });
+                }
+            };
+
+            request.onsuccess = (event) => {
+                this.db = event.target.result;
+                resolve();
+            };
+        });
+    }
+            initializeEventListeners() {
+                this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+                this.mediaInput.addEventListener('change', (e) => this.handleMediaPreview(e));
+                window.addEventListener('unload', () => this.saveToLocalStorage());
+            }
+
+            showToast(message, isError = false) {
+                this.toast.textContent = message;
+                this.toast.className = `toast ${isError ? 'error' : ''}`;
+                this.toast.classList.add('show');
+                
+                gsap.to(this.toast, {
+                    x: 0,
+                    opacity: 1,
+                    duration: 0.3,
+                    ease: 'power2.out'
+                });
+                
+                setTimeout(() => {
+                    gsap.to(this.toast, {
+                        x: '100%',
+                        opacity: 0,
+                        duration: 0.3,
+                        ease: 'power2.in'
+                    });
+                }, 3000);
+            }
+
+            handleMediaPreview(event) {
+            this.previewContainer.innerHTML = '';
+            const files = event.target.files;
+
+            if (files.length > 5) {
+                this.showToast('Maximum 5 files allowed', true);
+                this.mediaInput.value = '';
+                return;
+            }
+
+            Array.from(files).forEach((file, index) => {
+                if (file.size > this.MAX_FILE_SIZE) {
+                    this.showToast(`File "${file.name}" exceeds 20MB limit`, true);
+                    return;
+                }
+
+                const reader = new FileReader();
+                const previewItem = document.createElement('div');
+                previewItem.className = 'preview-item';
+
+                reader.onload = (e) => {
+                    if (file.type.startsWith('image/')) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        previewItem.appendChild(img);
+                    } else if (file.type.startsWith('video/')) {
+                        const video = document.createElement('video');
+                        video.src = e.target.result;
+                        video.controls = true;
+                        previewItem.appendChild(video);
+                    }
+
+                    gsap.from(previewItem, {
+                        scale: 0,
+                        opacity: 0,
+                        duration: 0.5,
+                        delay: index * 0.1,
+                        ease: 'back.out(1.7)'
+                    });
+                };
+
+                reader.onerror = () => {
+                    this.showToast('Error reading file', true);
+                };
+
+                reader.readAsDataURL(file);
+                this.previewContainer.appendChild(previewItem);
+            });
+        } 
+        async loadMemories() {
+        try {
+            const transaction = this.db.transaction(['memories'], 'readonly');
+            const store = transaction.objectStore('memories');
+            const request = store.getAll();
+
+            request.onsuccess = () => {
+                this.memories = request.result.sort((a, b) => b.timestamp - a.timestamp);
+                this.displayMemories();
+            };
+        } catch (error) {
+            this.showToast('Error loading memories', true);
+            console.error('Error loading memories:', error);
+        }
+    }
+
+    async saveMemory(memory) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['memories'], 'readwrite');
+            const store = transaction.objectStore('memories');
+            const request = store.add(memory);
+
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject();
+        });
+    }
+
+    async handleSubmit(event) {
+        event.preventDefault();
+        try {
+            const title = document.getElementById('memoryTitle').value.trim();
+            const description = document.getElementById('memoryDescription').value.trim();
+            const files = this.mediaInput.files;
+
+            if (!title) {
+                this.showToast('Please enter a title', true);
+                return;
+            }
+
+            const mediaFiles = [];
+            for (const file of files) {
+                try {
+                    const base64 = await this.fileToBase64(file);
+                    mediaFiles.push({
+                        type: file.type,
+                        data: base64
+                    });
+                } catch (error) {
+                    this.showToast('Error processing media file', true);
+                    return;
+                }
+            }
+
+            const memory = {
+                id: Date.now(),
+                title,
+                description,
+                media: mediaFiles,
+                date: new Date().toLocaleDateString(),
+                timestamp: Date.now()
+            };
+
+            await this.saveMemory(memory);
+            this.memories.unshift(memory);
+            
+            gsap.to('.memory-form', {
+                scale: 1.02,
+                duration: 0.2,
+                ease: 'power2.out',
+                onComplete: () => {
+                    gsap.to('.memory-form', {
+                        scale: 1,
+                        duration: 0.2,
+                        ease: 'power2.in'
+                    });
+                    this.form.reset();
+                    this.previewContainer.innerHTML = '';
+                }
+            });
+
+            this.displayMemories();
+            this.showToast('Memory saved successfully!');
+        } catch (error) {
+            this.showToast('Error saving memory', true);
+            console.error('Error saving memory:', error);
+        }
+    }
+
+
+            fileToBase64(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => reject(new Error('Error reading file'));
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            saveToLocalStorage() {
+                try {
+                    localStorage.setItem('memories', JSON.stringify(this.memories));
+                } catch (error) {
+                    this.showToast('Error saving to storage', true);
+                    console.error('Error saving to storage:', error);
+                }
+            }
+
+            async deleteMemoryFromDB(id) {
+    return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction(['memories'], 'readwrite');
+        const store = transaction.objectStore('memories');
+        const request = store.delete(id);
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject();
+    });
+}
+async deleteMemory(id) {
+    try {
+        const card = document.querySelector(`[data-id="${id}"]`).closest('.memory-card');
+
+        gsap.to(card, {
+            scale: 0.8,
+            opacity: 0,
+            duration: 0.3,
+            ease: 'power2.in',
+            onComplete: async () => {
+                await this.deleteMemoryFromDB(id); // Ensure it's deleted from IndexedDB
+                this.memories = this.memories.filter(memory => memory.id !== id);
+                this.displayMemories();
+                this.showToast('Memory deleted successfully!');
+            }
+        });
+    } catch (error) {
+        this.showToast('Error deleting memory', true);
+        console.error('Error deleting memory:', error);
+    }
+}
+
+
+            initializeModalEvents() {
+                this.modal.querySelector('.modal-close').addEventListener('click', () => {
+                    this.closeModal();
+                });
+
+                this.modal.addEventListener('click', (e) => {
+                    if (e.target === this.modal) {
+                        this.closeModal();
+                    }
+                });
+
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        this.closeModal();
+                    }
+                });
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            openMemoryModal(memory) {
+                const modalTitle = this.modal.querySelector('.memory-title');
+                const modalMedia = this.modal.querySelector('.modal-media');
+                const modalDesc = this.modal.querySelector('.memory-description');
+                const modalDetails = this.modal.querySelector('.memory-details');
+
+                modalTitle.textContent = memory.title;
+                modalDesc.textContent = memory.description;
+                
+                // Display media files
+                modalMedia.innerHTML = '';
+                memory.media.forEach(media => {
+                    const mediaElement = media.type.startsWith('image/') 
+                        ? `<img src="${media.data}" alt="${memory.title}">`
+                        : `<video src="${media.data}" controls></video>`;
+                    modalMedia.insertAdjacentHTML('beforeend', mediaElement);
+                });
+
+                // Calculate total size of media files
+                const totalSize = memory.media.reduce((acc, media) => {
+                    const base64Size = Math.ceil((media.data.length * 3) / 4);
+                    return acc + base64Size;
+                }, 0);
+
+                // Display memory details
+                modalDetails.innerHTML = `
+                    <div class="memory-details-item">
+                        <span class="memory-details-label">Created Date</span>
+                        <span class="memory-details-value">${new Date(memory.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div class="memory-details-item">
+                        <span class="memory-details-label">Number of Files</span>
+                        <span class="memory-details-value">${memory.media.length}</span>
+                    </div>
+                    <div class="memory-details-item">
+                        <span class="memory-details-label">Total Size</span>
+                        <span class="memory-details-value">${this.formatFileSize(totalSize)}</span>
+                    </div>
+                    <div class="memory-details-item">
+                        <span class="memory-details-label">Media Types</span>
+                        <span class="memory-details-value">${memory.media.map(m => m.type.split('/')[0]).join(', ')}</span>
+                    </div>
+                `;
+
+                this.modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+
+                // Animate modal opening
+                gsap.from(this.modal.querySelector('.modal-content'), {
+                    scale: 0.8,
+                    opacity: 0,
+                    duration: 0.3,
+                    ease: 'back.out(1.7)'
+                });
+            }
+
+            closeModal() {
+                gsap.to(this.modal.querySelector('.modal-content'), {
+                    scale: 0.8,
+                    opacity: 0,
+                    duration: 0.3,
+                    ease: 'power2.in',
+                    onComplete: () => {
+                        this.modal.classList.remove('active');
+                        document.body.style.overflow = '';
+                    }
+                });
+            }
+
+            displayMemories() {
+                this.memoriesGrid.innerHTML = '';
+
+                this.memories.forEach((memory, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'memory-card';
+                    
+                    let mediaHtml = '';
+                    if (memory.media && memory.media.length > 0) {
+                        const firstMedia = memory.media[0];
+                        if (firstMedia.type.startsWith('image/')) {
+                            mediaHtml = `<img src="${firstMedia.data}" class="memory-media" alt="${memory.title}">`;
+                        } else if (firstMedia.type.startsWith('video/')) {
+                            mediaHtml = `<video src="${firstMedia.data}" class="memory-media" controls></video>`;
+                        }
+                    }
+                     // Add click event to open modal
+                     card.addEventListener('click', () => {
+                        this.openMemoryModal(memory);
+                    });
+
+                    card.innerHTML = `
+                        ${mediaHtml}
+                        <div class="memory-content">
+                            <h3 class="memory-title">${this.escapeHtml(memory.title)}</h3>
+                            <p class="memory-description">${this.escapeHtml(memory.description)}</p>
+                            <small class="memory-date">${memory.date}</small>
+                            ${memory.media.length > 1 ? `<small class="media-count">+${memory.media.length - 1} more</small>` : ''}
+                        </div>
+                        <div class="memory-actions">
+                            <button class="delete-btn" data-id="${memory.id}">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    `;
+
+                    const deleteBtn = card.querySelector('.delete-btn');
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (confirm('Are you sure you want to delete this memory?')) {
+                            this.deleteMemory(memory.id);
+                        }
+                    });
+
+                    this.memoriesGrid.appendChild(card);
+
+                    // Animate card entrance
+                    gsap.from(card, {
+                        opacity: 0,
+                        y: 50,
+                        duration: 0.5,
+                        delay: index * 0.1,
+                        ease: 'power2.out'
+                    });
+                });
+
+                if (this.memories.length === 0) {
+                    const emptyState = document.createElement('div');
+                    emptyState.className = 'empty-state';
+                    emptyState.innerHTML = `
+                        <i class="fas fa-camera"></i>
+                        <p>No memories yet. Start capturing your moments!</p>
+                    `;
+                    this.memoriesGrid.appendChild(emptyState);
+
+                    // Animate empty state
+                    gsap.from(emptyState, {
+                        opacity: 0,
+                        scale: 0.8,
+                        duration: 0.5,
+                        ease: 'back.out(1.7)'
+                    });
+                }
+            }
+
+            escapeHtml(unsafe) {
+                return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+        }
+
+        // Initialize the app when the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new MemoryKeeper();
+        });
+    </script>
+</body>
+</html>
